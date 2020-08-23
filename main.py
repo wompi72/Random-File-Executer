@@ -7,6 +7,7 @@ from os.path import isfile, join
 import logging
 
 CONFIG_PATH = "config.json"
+DEFAULT_EXECUTABLES = [".mp4", ".mov", ".wmv", ".flv", ".avi"]
 
 
 class Gui(tk.Tk):
@@ -43,21 +44,18 @@ class Gui(tk.Tk):
 
         self.read_config()
 
-    def read_config(self):
-
-        with open(CONFIG_PATH, "r") as config_file:
-            try:
+    def read_config(self): #TODO dont add config.json to zip
+        try:
+            with open(CONFIG_PATH, "r") as config_file:
                 config = json.load(config_file)
-            except Exception as e:
-                logging.error(repr(e), exc_info=True)
-                config = {}
+        except Exception as e:
+            logging.warning("Couldn't read config.")
+            config = {}
 
-        if config.get("last_added_path"):
-            self.last_added_path = config.get("last_added_path")
-        if config.get("close_on_execute"):
-            self.close_on_execute = config.get("close_on_execute")
 
-        self.executables = config.get("executables", [])
+        self.last_added_path = config.get("last_added_path", "/")
+        self.close_on_execute = config.get("close_on_execute", True)
+        self.executables = config.get("executables", DEFAULT_EXECUTABLES)
         if self.executables:
             self.execute_label.configure(text="Executing files: {}".format(", ".join(self.executables)))
         else:

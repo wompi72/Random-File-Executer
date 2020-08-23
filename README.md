@@ -3,8 +3,7 @@ runs random files with default application in specified directories.
 
 ## How to use:
 
-Download the latest version of rfe0.1.zip from [Download page.](https://github.com/wompi72/Random-File-Executer/releases)
-Unpack rfe0.1.zip to a directory of your choosing.
+Download the latest version of rfe.exe from [Download page.](https://github.com/wompi72/Random-File-Executer/releases) and put it in your preferred directory.
 
 Start the rfe.exe (Your Antivirus software probably won't like it, because this app executes a command to start the file. You have access to the source code, so decide for yourself, if you want to risk trusting me.)
 
