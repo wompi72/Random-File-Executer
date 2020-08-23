@@ -1,0 +1,26 @@
+{
+    "executables": [
+        ".mp4",
+        ".mov",
+        ".wmv",
+        ".flv",
+        ".avi"
+    ],
+    "auto_save": true,
+    "last_added_path": "/",
+    "close_on_execute": true,
+    "categories": [
+        {
+            "name": "duck",
+            "path": "D:/videos/ducks",
+            "weight": 10,
+            "series": false
+        },
+        {
+            "name": "cat",
+            "path": "D:/videos/cats",
+            "weight": 90,
+            "series": false
+        }
+    ]
+}
