@@ -8,6 +8,7 @@ import logging
 
 CONFIG_PATH = "config.json"
 DEFAULT_EXECUTABLES = [".mp4", ".mov", ".wmv", ".flv", ".avi"]
+#pyinstaller --onefile --clean -w main.py
 
 
 class Gui(tk.Tk):
@@ -25,6 +26,17 @@ class Gui(tk.Tk):
         self.content.pack(fill='both', expand=True)
         self.content.category_frames = []
         self.footer.pack(fill='both')
+
+
+        self.prev_files_active_var = tk.IntVar(value=0)
+        self.prev_files_active = tk.Checkbutton(self.header, text="Don't open the last", variable=self.prev_files_active_var)
+        self.prev_files_active.pack(side=tk.LEFT)
+        self.prev_files_var = tk.IntVar(value=0)
+        vcmd = (self.register(validate_is_digit))
+        self.prev_files = tk.Entry(self.header, textvariable=self.prev_files_var, validate='all', validatecommand=(vcmd, '%P'), width=5)
+        self.prev_files.pack(side=tk.LEFT)
+        tk.Label(self.header, text="files").pack(side=tk.LEFT)
+
 
         self.auto_save_var = tk.IntVar(value=0)
         self.auto_save = tk.Checkbutton(self.header, text="Save config on execute", variable=self.auto_save_var)
@@ -52,6 +64,10 @@ class Gui(tk.Tk):
             logging.warning("Couldn't read config.")
             config = {}
 
+        prev_files = config.get("prev_files")
+        if prev_files and type(prev_files) == dict:
+            self.prev_files_active_var.set(1 if prev_files.get("active", False) else 0)
+            self.prev_files_var.set(prev_files.get("number", 0))
 
         self.last_added_path = config.get("last_added_path", "/")
         self.close_on_execute = config.get("close_on_execute", True)
@@ -69,10 +85,15 @@ class Gui(tk.Tk):
     def save_config(self):
         with open(CONFIG_PATH, "w+", encoding='utf-8') as config_file:
             config = {}
+
             config["executables"] = self.executables
             config["auto_save"] = True if self.auto_save_var.get() else False
             config["last_added_path"] = self.last_added_path
             config["close_on_execute"] = self.close_on_execute
+            config["prev_files"] = {
+                "active": True if self.prev_files_active_var.get() else False,
+                "number": self.prev_files_var.get()
+            }
             categories = []
             for category in self.content.category_frames:
                 categories.append({
@@ -119,11 +140,12 @@ class Gui(tk.Tk):
                 file = self.get_file(category)
                 break
         else:
-            print("I'm stupid :/")
+            logging.error("how did we get here?")
             return
         if file:
-            print(file)
             os.startfile(file, 'open')
+            with open("./executed_files.log", "a+") as executed_files:
+                executed_files.write(file + "\n")
 
         if self.close_on_execute:
             self.quit()
@@ -131,16 +153,39 @@ class Gui(tk.Tk):
     def get_file(self, path):
         dirpath = path.path.get()
         file_paths = []
-        for f in os.listdir(dirpath):
-            file_path = join(dirpath, f)
-            if not isfile(file_path):
-                continue
-            for executable in self.executables:
-                if f.endswith(executable):
-                    break
+        prev_files_active = self.prev_files_active_var.get()
+        prev_files_count = 0
+        executed_files = []
+        if prev_files_active:
+            try:
+                with open("./executed_files.log", "r+") as ex_files:
+                    executed_files = ex_files.readlines()[-self.prev_files_var.get():]
+            except:
+                pass
+
+        for i in range(2):
+            for f in os.listdir(dirpath):
+                file_path = join(dirpath, f)
+                if not isfile(file_path):
+                    continue
+                if path.series and "1" not in f:
+                    continue
+                if prev_files_active:
+                    if file_path + "\n" in executed_files:
+                        prev_files_count += 1
+                        continue
+                for executable in self.executables:
+                    if f.endswith(executable):
+                        break
+                else:
+                    continue
+                file_paths.append(file_path)
+
+            if prev_files_count and not file_paths: #Try again if all files were previously executed
+                logging.debug("found no file that wasn't executed before: restart search")
+                prev_files_active = False
             else:
-                continue
-            file_paths.append(file_path)
+                break
 
         if not file_paths:
             message("NotFoundError", "Couldn't find files in {} which end with: {}".format(path.path.get(), self.executables))
@@ -175,28 +220,28 @@ class CategoryFrame(tk.Frame):
         tk.Button(self, text="Remove", command=self.remove).pack(side=tk.RIGHT)
 
         self.weight = tk.IntVar(value=weight)
-        vcmd = (self.register(self.validate_is_digit))
-        tk.Entry(self, textvariable=self.weight, validate='all', validatecommand=(vcmd, '%P')).pack(side=tk.RIGHT)
+        vcmd = (self.register(validate_is_digit))
+        tk.Entry(self, textvariable=self.weight, validate='all', validatecommand=(vcmd, '%P'), width=5).pack(side=tk.RIGHT)
         tk.Label(self, text="weight:").pack(side=tk.RIGHT)
 
         self.series = series
-
-    def validate_is_digit(self, P):
-        if str.isdigit(P) or P == "":
-            return True
-        else:
-            return False
 
     def remove(self):
         self.parent.category_frames.remove(self)
         self.destroy()
 
 
+def validate_is_digit(P):
+    if str.isdigit(P) or P == "":
+        return True
+    else:
+        return False
+
+
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%d.%m.%Y %H:%M',
-                    filename='debug.log',
-                    filemode='w')
+                    filename='debug.log')
 try:
     app = Gui()
     app.geometry("720x400")
